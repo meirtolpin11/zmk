@@ -12,10 +12,14 @@
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
+static struct k_mutex sensor_rotate_lock = Z_MUTEX_INITIALIZER(sensor_rotate_lock);
+
 int zmk_behavior_sensor_rotate_common_accept_data(
     struct zmk_behavior_binding *binding, struct zmk_behavior_binding_event event,
     const struct zmk_sensor_config *sensor_config, size_t channel_data_size,
     const struct zmk_sensor_channel_data *channel_data) {
+
+    k_mutex_lock(&sensor_rotate_lock, K_FOREVER);
 
     LOG_DBG("Entering function: %s", __func__);
 
@@ -73,6 +77,8 @@ int zmk_behavior_sensor_rotate_common_accept_data(
     LOG_DBG("Stored triggers[%d][%d] = %d", sensor_index, event.layer, triggers);
 
     LOG_DBG("Exiting function: %s", __func__);
+
+    k_mutex_unlock(&sensor_rotate_lock);
     return 0;
 }
 
