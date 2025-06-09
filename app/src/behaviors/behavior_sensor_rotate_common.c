@@ -27,6 +27,10 @@ int zmk_behavior_sensor_rotate_common_accept_data(
     const struct sensor_value value = channel_data[0].value;
     int sensor_index = ZMK_SENSOR_POSITION_FROM_VIRTUAL_KEY_POSITION(event.position);
 
+    if (value.val1 == 0 && value.val2 == 0) {
+        return 0;
+    }
+    
     struct sensor_value remainder = data->remainder[sensor_index][1];
     remainder.val1 += value.val1;
     remainder.val2 += value.val2;
