@@ -42,7 +42,7 @@ int zmk_behavior_sensor_rotate_common_accept_data(
         triggers = value.val2;
         LOG_DBG("Using legacy EC11 encoder behavior, triggers = val2 = %d", triggers);
     } else {
-        struct sensor_value remainder = data->remainder[sensor_index][event.layer];
+        struct sensor_value remainder = data->remainder[sensor_index][1];
         LOG_DBG("Current remainder: val1=%d, val2=%d", remainder.val1, remainder.val2);
 
         remainder.val1 += value.val1;
@@ -67,15 +67,15 @@ int zmk_behavior_sensor_rotate_common_accept_data(
             remainder.val2 = 0; 
         }            
         
-        data->remainder[sensor_index][event.layer] = remainder;
+        data->remainder[sensor_index][1] = remainder;
         LOG_DBG("Stored new remainder into data structure");
         
     }
 
     LOG_DBG("Final triggers: %d, inc keycode: 0x%02X, dec keycode: 0x%02X", triggers, binding->param1, binding->param2);
 
-    data->triggers[sensor_index][event.layer] = triggers;
-    LOG_DBG("Stored triggers[%d][%d] = %d", sensor_index, event.layer, triggers);
+    data->triggers[sensor_index][1] = triggers;
+    LOG_DBG("Stored triggers[%d][%d] = %d", sensor_index, 1, triggers);
 
     LOG_DBG("Exiting function: %s", __func__);
 
@@ -94,11 +94,11 @@ int zmk_behavior_sensor_rotate_common_process(struct zmk_behavior_binding *bindi
     const int sensor_index = ZMK_SENSOR_POSITION_FROM_VIRTUAL_KEY_POSITION(event.position);
 
     if (mode != BEHAVIOR_SENSOR_BINDING_PROCESS_MODE_TRIGGER) {
-        data->triggers[sensor_index][event.layer] = 0;
+        data->triggers[sensor_index][1] = 0;
         return ZMK_BEHAVIOR_TRANSPARENT;
     }
 
-    int triggers = data->triggers[sensor_index][event.layer];
+    int triggers = data->triggers[sensor_index][1];
 
     struct zmk_behavior_binding triggered_binding;
     if (triggers > 0) {
