@@ -19,63 +19,38 @@ int zmk_behavior_sensor_rotate_common_accept_data(
     const struct zmk_sensor_config *sensor_config, size_t channel_data_size,
     const struct zmk_sensor_channel_data *channel_data) {
 
-    LOG_DBG("Locking");
     k_mutex_lock(&sensor_rotate_lock, K_FOREVER);
 
-    LOG_DBG("Entering function: %s", __func__);
-
     const struct device *dev = zmk_behavior_get_binding(binding->behavior_dev);
-    LOG_DBG("Got device: %p for behavior_dev: %p", dev, binding->behavior_dev);
-
     struct behavior_sensor_rotate_data *data = dev->data;
-    LOG_DBG("Loaded behavior sensor rotate data: %p", data);
 
     const struct sensor_value value = channel_data[0].value;
-    LOG_DBG("Sensor value: val1=%d, val2=%d", value.val1, value.val2);
-
-    int triggers;
     int sensor_index = ZMK_SENSOR_POSITION_FROM_VIRTUAL_KEY_POSITION(event.position);
-    LOG_DBG("Calculated sensor_index: %d from position: %d from layer: %d", sensor_index, event.position, event.layer);
 
+    struct sensor_value remainder = data->remainder[sensor_index][1];
+    remainder.val1 += value.val1;
+    remainder.val2 += value.val2;
 
-        struct sensor_value remainder = data->remainder[sensor_index][1];
-        LOG_DBG("Cached remainder: val1=%d, val2=%d", remainder.val1, remainder.val2);
+    if (remainder.val2 >= 1000000 || remainder.val2 <= -1000000) {
+        remainder.val1 += remainder.val2 / 1000000;
+        remainder.val2 %= 1000000;
+    }
 
-        remainder.val1 += value.val1;
-        remainder.val2 += value.val2;
-        LOG_DBG("New values: val1=%d, val2=%d", value.val1, value.val2);
+    int trigger_degrees = 360 / sensor_config->triggers_per_rotation;
+    int triggers = remainder.val1 / trigger_degrees;
+    remainder.val1 %= trigger_degrees;
 
-        if (remainder.val2 >= 1000000 || remainder.val2 <= -1000000) {
-            remainder.val1 += remainder.val2 / 1000000;
-            remainder.val2 %= 1000000;
-            LOG_DBG("Normalized remainder: val1=%d, val2=%d", remainder.val1, remainder.val2);
-        }
+    if (triggers > 0) {
+        remainder.val1 = 0;
+        remainder.val2 = 0;
+    }
 
-        int trigger_degrees = 360 / sensor_config->triggers_per_rotation;
-        LOG_DBG("Calculated trigger_degrees: %d from triggers_per_rotation: %d", trigger_degrees, sensor_config->triggers_per_rotation);
-
-        triggers = remainder.val1 / trigger_degrees;
-        remainder.val1 %= trigger_degrees;
-        LOG_DBG("Calculated triggers: %d, new remainder.val1: %d", triggers, remainder.val1);
-
-        if (triggers > 0) {
-            LOG_DBG("Resetting reminder");
-            remainder.val1 = 0;
-            remainder.val2 = 0; 
-        }            
-        
-        data->remainder[sensor_index][1] = remainder;
-        LOG_DBG("Stored new remainder into data structure");
-        
-
-    LOG_DBG("Final triggers: %d, inc keycode: 0x%02X, dec keycode: 0x%02X", triggers, binding->param1, binding->param2);
-
+    data->remainder[sensor_index][1] = remainder;
     data->triggers[sensor_index][1] = triggers;
-    LOG_DBG("Stored triggers[%d][%d] = %d", sensor_index, 1, triggers);
 
-    LOG_DBG("Exiting function: %s", __func__);
+    LOG_DBG("Device %p | Sensor[%d]: val1=%d val2=%d → triggers=%d → inc=0x%02X, dec=0x%02X",
+            dev, sensor_index, value.val1, value.val2, triggers, binding->param1, binding->param2);
 
-    LOG_DBG("UNLOCKING");
     k_mutex_unlock(&sensor_rotate_lock);
     return 0;
 }
