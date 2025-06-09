@@ -57,8 +57,14 @@ int zmk_behavior_sensor_rotate_common_accept_data(
         remainder.val1 %= trigger_degrees;
         LOG_DBG("Calculated triggers: %d, new remainder.val1: %d", triggers, remainder.val1);
 
+        if (triggers > 0) {
+            remainder.val1 = 0;
+            remainder.val2 = 0; 
+        }            
+        
         data->remainder[sensor_index][event.layer] = remainder;
         LOG_DBG("Stored new remainder into data structure");
+        
     }
 
     LOG_DBG("Final triggers: %d, inc keycode: 0x%02X, dec keycode: 0x%02X", triggers, binding->param1, binding->param2);
