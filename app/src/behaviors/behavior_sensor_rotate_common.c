@@ -8,9 +8,16 @@
 #include <zmk/virtual_key_position.h>
 #include <zmk/events/position_state_changed.h>
 
+#include <zephyr/sys/time_units.h> // for time constants
+#include <zephyr/sys_clock.h>      // for k_uptime_get()
+
+
 #include "behavior_sensor_rotate_common.h"
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
+
+// Track last processed time per sensor index (for both directions)
+static int64_t last_trigger_time[ZMK_VIRTUAL_KEY_POSITION_LEN][2] = {0};
 
 static struct k_mutex sensor_rotate_lock = Z_MUTEX_INITIALIZER(sensor_rotate_lock);
 
@@ -28,6 +35,15 @@ int zmk_behavior_sensor_rotate_common_accept_data(
     int sensor_index = ZMK_SENSOR_POSITION_FROM_VIRTUAL_KEY_POSITION(event.position);
 
     if (value.val1 == 0 && value.val2 == 0) {
+        return 0;
+    }
+    
+    int direction = 1; // Assume 1 means clockwise; this can be derived from value if needed
+
+    int64_t now = k_uptime_get();
+    if (now - last_trigger_time[sensor_index][direction] < MSEC_PER_SEC) {
+        LOG_DBG("Debounced sensor[%d] dir=%d: Ignored due to time < 1s", sensor_index, direction);
+        k_mutex_unlock(&sensor_rotate_lock);
         return 0;
     }
     
