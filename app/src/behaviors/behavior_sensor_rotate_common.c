@@ -35,19 +35,15 @@ int zmk_behavior_sensor_rotate_common_accept_data(
 
     int triggers;
     int sensor_index = ZMK_SENSOR_POSITION_FROM_VIRTUAL_KEY_POSITION(event.position);
-    LOG_DBG("Calculated sensor_index: %d from position: %d from layer: %d", sensor_index, event.position);
+    LOG_DBG("Calculated sensor_index: %d from position: %d from layer: %d", sensor_index, event.position, event.layer);
 
-    if (value.val1 == 0) {
-        // Old EC11 encoder behavior
-        triggers = value.val2;
-        LOG_DBG("Using legacy EC11 encoder behavior, triggers = val2 = %d", triggers);
-    } else {
+
         struct sensor_value remainder = data->remainder[sensor_index][1];
-        LOG_DBG("Current remainder: val1=%d, val2=%d", remainder.val1, remainder.val2);
+        LOG_DBG("Cached remainder: val1=%d, val2=%d", remainder.val1, remainder.val2);
 
         remainder.val1 += value.val1;
         remainder.val2 += value.val2;
-        LOG_DBG("Updated remainder (post-add): val1=%d, val2=%d", remainder.val1, remainder.val2);
+        LOG_DBG("New values: val1=%d, val2=%d", value.val1, value.val2);
 
         if (remainder.val2 >= 1000000 || remainder.val2 <= -1000000) {
             remainder.val1 += remainder.val2 / 1000000;
@@ -63,6 +59,7 @@ int zmk_behavior_sensor_rotate_common_accept_data(
         LOG_DBG("Calculated triggers: %d, new remainder.val1: %d", triggers, remainder.val1);
 
         if (triggers > 0) {
+            LOG_DBG("Resetting reminder");
             remainder.val1 = 0;
             remainder.val2 = 0; 
         }            
@@ -70,7 +67,6 @@ int zmk_behavior_sensor_rotate_common_accept_data(
         data->remainder[sensor_index][1] = remainder;
         LOG_DBG("Stored new remainder into data structure");
         
-    }
 
     LOG_DBG("Final triggers: %d, inc keycode: 0x%02X, dec keycode: 0x%02X", triggers, binding->param1, binding->param2);
 
