@@ -22,43 +22,44 @@ int zmk_behavior_sensor_rotate_common_accept_data(
     struct zmk_behavior_binding *binding, struct zmk_behavior_binding_event event,
     const struct zmk_sensor_config *sensor_config, size_t channel_data_size,
     const struct zmk_sensor_channel_data *channel_data) {
+
+    k_mutex_lock(&sensor_rotate_lock, K_FOREVER);
+
     const struct device *dev = zmk_behavior_get_binding(binding->behavior_dev);
     struct behavior_sensor_rotate_data *data = dev->data;
 
     const struct sensor_value value = channel_data[0].value;
-    int triggers;
     int sensor_index = ZMK_SENSOR_POSITION_FROM_VIRTUAL_KEY_POSITION(event.position);
 
-    // Some funky special casing for "old encoder behavior" where ticks where reported in val2 only,
-    // instead of rotational degrees in val1.
-    // REMOVE ME: Remove after a grace period of old ec11 sensor behavior
-    if (value.val1 == 0) {
-        triggers = value.val2;
-    } else {
-        struct sensor_value remainder = data->remainder[sensor_index][event.layer];
+    if (value.val1 == 0 && value.val2 == 0) {
+        return 0;
+    }
+    
+    struct sensor_value remainder = data->remainder[sensor_index][1];
+    remainder.val1 += value.val1;
+    remainder.val2 += value.val2;
 
-        remainder.val1 += value.val1;
-        remainder.val2 += value.val2;
-
-        if (remainder.val2 >= 1000000 || remainder.val2 <= 1000000) {
-            remainder.val1 += remainder.val2 / 1000000;
-            remainder.val2 %= 1000000;
-        }
-
-        int trigger_degrees = 360 / sensor_config->triggers_per_rotation;
-        triggers = remainder.val1 / trigger_degrees;
-        remainder.val1 %= trigger_degrees;
-
-        data->remainder[sensor_index][event.layer] = remainder;
+    if (remainder.val2 >= 1000000 || remainder.val2 <= -1000000) {
+        remainder.val1 += remainder.val2 / 1000000;
+        remainder.val2 %= 1000000;
     }
 
-    LOG_DBG(
-        "val1: %d, val2: %d, remainder: %d/%d triggers: %d inc keycode 0x%02X dec keycode 0x%02X",
-        value.val1, value.val2, data->remainder[sensor_index][event.layer].val1,
-        data->remainder[sensor_index][event.layer].val2, triggers, binding->param1,
-        binding->param2);
+    int trigger_degrees = 360 / sensor_config->triggers_per_rotation;
+    int triggers = remainder.val1 / trigger_degrees;
+    remainder.val1 %= trigger_degrees;
 
-    data->triggers[sensor_index][event.layer] = triggers;
+    if (triggers > 0) {
+        remainder.val1 = 0;
+        remainder.val2 = 0;
+    }
+
+    data->remainder[sensor_index][1] = remainder;
+    data->triggers[sensor_index][1] = triggers;
+
+    LOG_DBG("Device %p | Sensor[%d]: val1=%d val2=%d → triggers=%d | reminder.val1=%d reminder.val2=%d",
+            dev, sensor_index, value.val1, value.val2, triggers, data->remainder[sensor_index][1].val1, data->remainder[sensor_index][1].val2);
+
+    k_mutex_unlock(&sensor_rotate_lock);
     return 0;
 }
 
