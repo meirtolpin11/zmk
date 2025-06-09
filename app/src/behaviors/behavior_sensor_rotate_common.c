@@ -35,7 +35,7 @@ int zmk_behavior_sensor_rotate_common_accept_data(
 
     int triggers;
     int sensor_index = ZMK_SENSOR_POSITION_FROM_VIRTUAL_KEY_POSITION(event.position);
-    LOG_DBG("Calculated sensor_index: %d from position: %d", sensor_index, event.position);
+    LOG_DBG("Calculated sensor_index: %d from position: %d from layer: %d", sensor_index, event.position);
 
     if (value.val1 == 0) {
         // Old EC11 encoder behavior
