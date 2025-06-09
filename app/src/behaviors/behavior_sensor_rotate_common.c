@@ -16,43 +16,57 @@ int zmk_behavior_sensor_rotate_common_accept_data(
     struct zmk_behavior_binding *binding, struct zmk_behavior_binding_event event,
     const struct zmk_sensor_config *sensor_config, size_t channel_data_size,
     const struct zmk_sensor_channel_data *channel_data) {
+
+    LOG_DBG("Entering function: %s", __func__);
+
     const struct device *dev = zmk_behavior_get_binding(binding->behavior_dev);
+    LOG_DBG("Got device: %p for behavior_dev: %p", dev, binding->behavior_dev);
+
     struct behavior_sensor_rotate_data *data = dev->data;
+    LOG_DBG("Loaded behavior sensor rotate data: %p", data);
 
     const struct sensor_value value = channel_data[0].value;
+    LOG_DBG("Sensor value: val1=%d, val2=%d", value.val1, value.val2);
+
     int triggers;
     int sensor_index = ZMK_SENSOR_POSITION_FROM_VIRTUAL_KEY_POSITION(event.position);
+    LOG_DBG("Calculated sensor_index: %d from position: %d", sensor_index, event.position);
 
-    // Some funky special casing for "old encoder behavior" where ticks where reported in val2 only,
-    // instead of rotational degrees in val1.
-    // REMOVE ME: Remove after a grace period of old ec11 sensor behavior
     if (value.val1 == 0) {
+        // Old EC11 encoder behavior
         triggers = value.val2;
+        LOG_DBG("Using legacy EC11 encoder behavior, triggers = val2 = %d", triggers);
     } else {
         struct sensor_value remainder = data->remainder[sensor_index][event.layer];
+        LOG_DBG("Current remainder: val1=%d, val2=%d", remainder.val1, remainder.val2);
 
         remainder.val1 += value.val1;
         remainder.val2 += value.val2;
+        LOG_DBG("Updated remainder (post-add): val1=%d, val2=%d", remainder.val1, remainder.val2);
 
-        if (remainder.val2 >= 1000000 || remainder.val2 <= 1000000) {
+        if (remainder.val2 >= 1000000 || remainder.val2 <= -1000000) {
             remainder.val1 += remainder.val2 / 1000000;
             remainder.val2 %= 1000000;
+            LOG_DBG("Normalized remainder: val1=%d, val2=%d", remainder.val1, remainder.val2);
         }
 
         int trigger_degrees = 360 / sensor_config->triggers_per_rotation;
+        LOG_DBG("Calculated trigger_degrees: %d from triggers_per_rotation: %d", trigger_degrees, sensor_config->triggers_per_rotation);
+
         triggers = remainder.val1 / trigger_degrees;
         remainder.val1 %= trigger_degrees;
+        LOG_DBG("Calculated triggers: %d, new remainder.val1: %d", triggers, remainder.val1);
 
         data->remainder[sensor_index][event.layer] = remainder;
+        LOG_DBG("Stored new remainder into data structure");
     }
 
-    LOG_DBG(
-        "val1: %d, val2: %d, remainder: %d/%d triggers: %d inc keycode 0x%02X dec keycode 0x%02X",
-        value.val1, value.val2, data->remainder[sensor_index][event.layer].val1,
-        data->remainder[sensor_index][event.layer].val2, triggers, binding->param1,
-        binding->param2);
+    LOG_DBG("Final triggers: %d, inc keycode: 0x%02X, dec keycode: 0x%02X", triggers, binding->param1, binding->param2);
 
     data->triggers[sensor_index][event.layer] = triggers;
+    LOG_DBG("Stored triggers[%d][%d] = %d", sensor_index, event.layer, triggers);
+
+    LOG_DBG("Exiting function: %s", __func__);
     return 0;
 }
 
