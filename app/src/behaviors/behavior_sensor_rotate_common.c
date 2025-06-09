@@ -84,7 +84,7 @@ int zmk_behavior_sensor_rotate_common_process(struct zmk_behavior_binding *bindi
 
     int direction;
     if (triggers > 0) {
-        direction = 1; 
+        direction = 0; 
     } else {
         direction = 0;
     }        
