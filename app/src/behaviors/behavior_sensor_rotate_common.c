@@ -52,8 +52,8 @@ int zmk_behavior_sensor_rotate_common_accept_data(
     data->remainder[sensor_index][1] = remainder;
     data->triggers[sensor_index][1] = triggers;
 
-    LOG_DBG("Device %p | Sensor[%d]: val1=%d val2=%d → triggers=%d | reminder.val1=%d reminder.val2=%d | reminder=%p",
-            dev, sensor_index, value.val1, value.val2, triggers, data->remainder[sensor_index][1].val1, data->remainder[sensor_index][1].val2, remainder);
+    LOG_DBG("Device %p | Sensor[%d]: val1=%d val2=%d → triggers=%d | reminder.val1=%d reminder.val2=%d",
+            dev, sensor_index, value.val1, value.val2, triggers, data->remainder[sensor_index][1].val1, data->remainder[sensor_index][1].val2);
 
     k_mutex_unlock(&sensor_rotate_lock);
     return 0;
