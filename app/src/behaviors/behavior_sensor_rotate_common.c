@@ -90,7 +90,7 @@ int zmk_behavior_sensor_rotate_common_process(struct zmk_behavior_binding *bindi
     }        
     
     int64_t now = k_uptime_get();
-    if (now - last_trigger_time[sensor_index][direction] < MSEC_PER_SEC / 10) {
+    if (now - last_trigger_time[sensor_index][direction] < MSEC_PER_SEC / 5) {
         LOG_DBG("Debounced sensor[%d] dir=%d: Ignored due to time < 1s", sensor_index, direction);
         return 0;
     }
