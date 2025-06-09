@@ -63,6 +63,7 @@ int zmk_behavior_sensor_rotate_common_accept_data(
     if (triggers > 0) {
         remainder.val1 = 0;
         remainder.val2 = 0;
+        last_trigger_time[sensor_index][direction] = now;
     }
 
     data->remainder[sensor_index][1] = remainder;
