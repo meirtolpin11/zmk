@@ -18,6 +18,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 // Track last processed time per sensor index (for both directions)
 static int64_t last_trigger_time[2][2] = {0};
 
+static struct k_mutex sensor_rotate_lock = Z_MUTEX_INITIALIZER(sensor_rotate_lock);
+
 int zmk_behavior_sensor_rotate_common_accept_data(
     struct zmk_behavior_binding *binding, struct zmk_behavior_binding_event event,
     const struct zmk_sensor_config *sensor_config, size_t channel_data_size,
