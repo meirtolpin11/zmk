@@ -19,6 +19,7 @@ int zmk_behavior_sensor_rotate_common_accept_data(
     const struct zmk_sensor_config *sensor_config, size_t channel_data_size,
     const struct zmk_sensor_channel_data *channel_data) {
 
+    LOG_DBG("Locking");
     k_mutex_lock(&sensor_rotate_lock, K_FOREVER);
 
     LOG_DBG("Entering function: %s", __func__);
@@ -78,6 +79,7 @@ int zmk_behavior_sensor_rotate_common_accept_data(
 
     LOG_DBG("Exiting function: %s", __func__);
 
+    LOG_DBG("UNLOCKING");
     k_mutex_unlock(&sensor_rotate_lock);
     return 0;
 }
