@@ -38,15 +38,6 @@ int zmk_behavior_sensor_rotate_common_accept_data(
         return 0;
     }
     
-    int direction = 1; // Assume 1 means clockwise; this can be derived from value if needed
-
-    int64_t now = k_uptime_get();
-    if (now - last_trigger_time[sensor_index][direction] < MSEC_PER_SEC) {
-        LOG_DBG("Debounced sensor[%d] dir=%d: Ignored due to time < 1s", sensor_index, direction);
-        k_mutex_unlock(&sensor_rotate_lock);
-        return 0;
-    }
-    
     struct sensor_value remainder = data->remainder[sensor_index][1];
     remainder.val1 += value.val1;
     remainder.val2 += value.val2;
@@ -63,7 +54,6 @@ int zmk_behavior_sensor_rotate_common_accept_data(
     if (triggers > 0) {
         remainder.val1 = 0;
         remainder.val2 = 0;
-        last_trigger_time[sensor_index][direction] = now;
     }
 
     data->remainder[sensor_index][1] = remainder;
@@ -85,6 +75,16 @@ int zmk_behavior_sensor_rotate_common_process(struct zmk_behavior_binding *bindi
 
     const int sensor_index = ZMK_SENSOR_POSITION_FROM_VIRTUAL_KEY_POSITION(event.position);
 
+    
+    int direction = 1; // Assume 1 means clockwise; this can be derived from value if needed
+
+    int64_t now = k_uptime_get();
+    if (now - last_trigger_time[sensor_index][direction] < MSEC_PER_SEC) {
+        LOG_DBG("Debounced sensor[%d] dir=%d: Ignored due to time < 1s", sensor_index, direction);
+        return 0;
+    }
+
+    
     if (mode != BEHAVIOR_SENSOR_BINDING_PROCESS_MODE_TRIGGER) {
         data->triggers[sensor_index][1] = 0;
         return ZMK_BEHAVIOR_TRANSPARENT;
@@ -108,6 +108,8 @@ int zmk_behavior_sensor_rotate_common_process(struct zmk_behavior_binding *bindi
         return ZMK_BEHAVIOR_TRANSPARENT;
     }
 
+    last_trigger_time[sensor_index][direction] = now;
+    
     LOG_DBG("Sensor binding: %s", binding->behavior_dev);
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT)
